@@ -1,5 +1,5 @@
 import { Block, PlainTextElement } from "@slack/types";
-import { plainTextInput, option, inputSelectStatic, divider } from '../block-kit/block-builder'
+import { plainTextInput, option, inputSelectStatic, divider, section } from '../block-kit/block-builder'
 import { buildModal } from "../block-kit/view-builder";
 import { modalFields, modalCallbacks } from '../constants'
 
@@ -32,19 +32,19 @@ export function issueCreateModal(): ViewsPayload {
                 ],
                 modalFields.urgency
             ),
-            inputSelectStatic(
-                "Where are you experiencing this issue?",
-                "location",
-                [
-                    option('Dublin', 'dublin'),
-                    option('London', 'london'),
-                    option('Paris', 'paris'),
-                    option('Munich', 'munich'),
-                ],
-                modalFields.location
-            ),
         ],
         modalCallbacks.createIssue,
         `Create`
     )
-    }
+}
+
+export function issueCreatedModal(ticketReference: string): ViewsPayload {
+    return buildModal(
+        `Ticket filed!`,
+        [
+            divider(),
+            section(`Thanks for getting in touch. We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/projects/HELP/issues/${ticketReference}|${ticketReference}>*. For your reference, we've also sent you a DM with a link to this. \n\n Have a great day!`)
+        ],
+        modalCallbacks.issueCreated
+    )
+}

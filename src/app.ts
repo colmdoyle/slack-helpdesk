@@ -6,8 +6,8 @@ import axios from 'axios';
 
 import { App } from '@slack/bolt'
 
-import { issueCreateModal } from './views/modals';
-import { modalCallbacks, modalFields } from './constants';
+import { issueCreateModal, issueCreatedModal } from './views/modals';
+import { modalCallbacks, modalFields, slashCommands, shortcuts } from './constants';
 
 const botToken = process.env.BOT_TOKEN;
 
@@ -16,7 +16,7 @@ const app = new App({
     token: botToken
 });
 
-const atlassianAPIURL = process.env.ATLASSIAN_BASE_URL;
+const atlassianAPIURL = process.env.ATLASSIAN_BASE_API_URL;
 
 export interface ModalStatePayload {
     values: {
@@ -32,8 +32,7 @@ export interface ModalStatePayload {
     }
 }
 
-app.command('/helpdesk', ({ respond, ack, context, body }) => {
-    respond('hello');
+app.command(slashCommands.helpdesk, ({ ack, context, body }) => {
     app.client.views.open({
         token: context.botToken,
         trigger_id: body.trigger_id,
@@ -42,14 +41,27 @@ app.command('/helpdesk', ({ respond, ack, context, body }) => {
     ack();
 });
 
-app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body }) => {
+app.shortcut(shortcuts.fileTicket,({ ack, context, body }) => {
+    app.client.views.open({
+        token: context.botToken,
+        trigger_id: body.trigger_id,
+        view: issueCreateModal()
+    })
     ack();
+});
+
+app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body, context }) => {
+    console.log(body);
     const state : ModalStatePayload = body.view.state;
-    console.log(state.values[modalFields.urgency][modalFields.urgency].selected_option!.value);
+    const summary = state.values[modalFields.issueTitle][modalFields.issueTitle].value;
+    const description = state.values[modalFields.issueDescription][modalFields.issueDescription].value;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const priorityID = state.values[modalFields.urgency][modalFields.urgency].selected_option!.value;
+
     axios.post(`${atlassianAPIURL}/issue`, {
         fields: {
-            summary: state.values[modalFields.issueTitle][modalFields.issueTitle].value,
-            description: state.values[modalFields.issueDescription][modalFields.issueDescription].value,
+            summary,
+            description,
             project: {
                 id: '10000'
             },
@@ -57,7 +69,7 @@ app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body }) => {
                 id: '10005'
             },
             priority: {
-                id: state.values[modalFields.urgency][modalFields.urgency].selected_option!.value
+                id: priorityID
             }
         }
     },
@@ -69,6 +81,15 @@ app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body }) => {
         }
     }
     ).then((response) => {
+        ack({
+            response_action: 'update',
+            view: issueCreatedModal(response.data.key)
+        });
+        app.client.chat.postMessage({
+            token: context.botToken,
+            text: `Thanks for getting in touch about "*${summary}*". We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/projects/HELP/issues/${response.data.key}|${response.data.key}>*. Have a great day!`,
+            channel: body.user.id
+        });
         console.log(response.data);
     }).catch((error) => {
         console.error(error);
