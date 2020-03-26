@@ -87,7 +87,8 @@ app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body, context }) =
         ack({
             response_action: 'update',
             view: issueCreatedModal(response.data.key)
-        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
         // DM Ticket details to the user
         app.client.chat.postMessage({
             token: context.botToken,
