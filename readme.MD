@@ -1,3 +1,3 @@
-# Blank Bolt Project
+# Slack / Jira simple connector
 
-A [Bolt](https://slack.dev/bolt) app with some of the more standard defaults ready out of the box. Just open up `src/app.ts` and start writing code.
+A simple implementation of the IT Helpdesk system used internally at Slack. End users file tickets via the Slack UI, which are then routed to our IT Department. In this example, the "IT Department" use JIRA issues, but this can be changed at will to any system, without affecting the end user experience.
