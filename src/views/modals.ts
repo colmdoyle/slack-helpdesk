@@ -28,7 +28,7 @@ export function issueCreateModal(): ViewsPayload {
                     option('Low', '4'),
                     option('Medium', '3'),
                     option('High', '2'),
-                    option('Work stopping', '1'),
+                    option('Highest', '1'),
                 ],
                 modalFields.urgency
             ),
@@ -43,7 +43,7 @@ export function issueCreatedModal(ticketReference: string): ViewsPayload {
         `Ticket filed!`,
         [
             divider(),
-            section(`Thanks for getting in touch. We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/projects/HELP/issues/${ticketReference}|${ticketReference}>*. For your reference, we've also sent you a DM with a link to this. \n\n Have a great day!`)
+            section(`Thanks for getting in touch. We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/servicedesk/customer/portal/1/${ticketReference}|${ticketReference}>*. For your reference, we've also sent you a DM with a link to this. \n\n Have a great day!`)
         ],
         modalCallbacks.issueCreated
     )

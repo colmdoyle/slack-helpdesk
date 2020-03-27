@@ -18,6 +18,10 @@ const app = new App({
 
 const atlassianAPIURL = process.env.ATLASSIAN_BASE_API_URL;
 
+const slackToServiceDeskIDMap: { [key: string]: string; } = {
+    "U9UFK54EA": "qm:a18f610d-47a5-4e06-a6c8-6cca9b96ba43:277eaeb4-63ed-425e-83a0-5309cfc84e53"
+}
+
 export interface ModalStatePayload {
     values: {
         [key: string]: {
@@ -41,7 +45,7 @@ app.command(slashCommands.helpdesk, ({ ack, context, body }) => {
     ack();
 });
 
-app.shortcut(shortcuts.fileTicket,({ ack, context, body }) => {
+app.shortcut(shortcuts.fileTicket, ({ ack, context, body }) => {
     app.client.views.open({
         token: context.botToken,
         trigger_id: body.trigger_id,
@@ -51,48 +55,42 @@ app.shortcut(shortcuts.fileTicket,({ ack, context, body }) => {
 });
 
 app.view({ callback_id: modalCallbacks.createIssue }, ({ ack, body, context }) => {
-    console.log(body);
-    const state : ModalStatePayload = body.view.state;
+    const state: ModalStatePayload = body.view.state;
     const summary = state.values[modalFields.issueTitle][modalFields.issueTitle].value;
     const description = state.values[modalFields.issueDescription][modalFields.issueDescription].value;
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const priorityID = state.values[modalFields.urgency][modalFields.urgency].selected_option!.value;
 
-    
-    // Create JIRA Issue
-    axios.post(`${atlassianAPIURL}/issue`, {
-        fields: {
+
+    // Create JIRA Service Desk Ticket
+    axios.post(`${atlassianAPIURL}/request`, {
+        raiseOnBehalfOf: slackToServiceDeskIDMap[body.user.id],
+        serviceDeskId: '1',
+        requestTypeId: '10007',
+        requestFieldValues: {
             summary,
             description,
-            project: {
-                id: '10000'
-            },
-            issuetype: {
-                id: '10005'
-            },
-            priority: {
-                id: priorityID
-            }
+            priority: { id: priorityID }
         }
     },
-    {
-        headers: {
-            'Authorization' : `Basic ${process.env.ATLASSIAN_TOKEN}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'        
+        {
+            headers: {
+                'Authorization': `Basic ${process.env.ATLASSIAN_TOKEN}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
         }
-    }
     ).then((response) => {
         // Update modal with issue details
         ack({
             response_action: 'update',
-            view: issueCreatedModal(response.data.key)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            view: issueCreatedModal(response.data.issueKey)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
         // DM Ticket details to the user
         app.client.chat.postMessage({
             token: context.botToken,
-            text: `Thanks for getting in touch about "*${summary}*". We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/projects/HELP/issues/${response.data.key}|${response.data.key}>*. Have a great day!`,
+            text: `Thanks for getting in touch about "*${summary}*". We're tracking your request in ticket *<${process.env.ATLASSIAN_BASE_WEB_UI}/servicedesk/customer/portal/1/${response.data.issueKey}|${response.data.issueKey}>*. Have a great day!`,
             channel: body.user.id
         });
     }).catch((error) => {
